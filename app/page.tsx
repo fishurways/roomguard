@@ -35,7 +35,12 @@ const popIn = {
     opacity: 1,
     scale: 1,
     y: 0,
-    transition: { type: "spring", stiffness: 260, damping: 22, delay: 0.6 },
+    transition: {
+      type: "spring" as const,
+      stiffness: 260,
+      damping: 22,
+      delay: 0.6,
+    },
   },
 };
 
@@ -85,7 +90,7 @@ function ResizingNavbar({ router }: { router: any }) {
           ? "0 6px 24px rgba(0,0,0,0.06)"
           : "0 0 0 rgba(0,0,0,0)",
       }}
-      transition={{ type: "spring", stiffness: 200, damping: 30 }}
+      transition={{ type: "spring" as const, stiffness: 200, damping: 30 }}
     >
       <div className="ed-nav-logo" onClick={() => router.push("/")}>
         RoomGuard
@@ -112,7 +117,11 @@ function ResizingNavbar({ router }: { router: any }) {
               <motion.div
                 layoutId="nav-hover-pill"
                 className="ed-nav-pill"
-                transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                transition={{
+                  type: "spring" as const,
+                  stiffness: 350,
+                  damping: 30,
+                }}
               />
             )}
             <span style={{ position: "relative", zIndex: 2 }}>{item.name}</span>
