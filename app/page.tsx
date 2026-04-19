@@ -1,92 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
-// ── Types ──────────────────────────────────────────────────────────────────
-interface HistoryEvent {
-  distance: number;
-  occupied: boolean;
-  created_at: string;
-}
-
-interface SensorResponse {
-  occupied: boolean;
-  distance: number | null;
-  vibrating: boolean;
-  lastOccupiedAt: number | null; // epoch ms from Date.now()
-  lastReadingAt: number | null;
-  shouldRelease: boolean;
-  history: HistoryEvent[];
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-US", { hour12: false });
-}
-
-function fmtEmpty(ms: number) {
-  const totalSec = Math.floor(ms / 1000);
-  const m = String(Math.floor(totalSec / 60)).padStart(2, "0");
-  const s = String(totalSec % 60).padStart(2, "0");
-  return `${m}:${s}`;
-}
-
-// ── Component ──────────────────────────────────────────────────────────────
-export default function RoomGuardDashboard() {
-  const [data, setData] = useState<SensorResponse | null>(null);
-  const [clock, setClock] = useState("");
-  const [now, setNow] = useState(Date.now());
-
-  // Live clock + "now" ticker so emptySeconds updates every second
-  useEffect(() => {
-    const tick = () => {
-      setClock(new Date().toLocaleTimeString("en-US", { hour12: false }));
-      setNow(Date.now());
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  // Poll sensor API every 2 seconds
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch("/api/sensor");
-        if (res.ok) setData(await res.json());
-      } catch {
-        // silently ignore network blips
-      }
-    };
-    fetchData();
-    const id = setInterval(fetchData, 2000);
-    return () => clearInterval(id);
-  }, []);
-
-  const occupied = data?.occupied ?? false;
-  const distance = data?.distance ?? 0;
-  const vibrating = data?.vibrating ?? false;
-  const shouldRelease = data?.shouldRelease ?? false;
-  const history = data?.history ?? [];
-
-  // How long has the room been empty? lastOccupiedAt is epoch ms.
-  const emptyMs =
-    !occupied && data?.lastOccupiedAt ? now - data.lastOccupiedAt : 0;
-
-  // Bar fill: closer to sensor = fuller bar
-  const distPct = Math.min(100, Math.round((1 - distance / 200) * 100));
-
-  // Derived stats from history
-  const vacantCount = history.filter((e) => !e.occupied).length;
-  const avgDist =
-    history.length > 0
-      ? Math.round(history.reduce((a, e) => a + e.distance, 0) / history.length)
-      : 0;
+export default function LandingPage() {
+  const router = useRouter();
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -97,19 +19,16 @@ export default function RoomGuardDashboard() {
           min-height: 100vh;
         }
 
-        .rg-page {
-          max-width: 720px;
-          margin: 0 auto;
-          padding: 28px 20px 48px;
-        }
-
-        .rg-nav {
+        .land-nav {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          margin-bottom: 24px;
+          padding: 20px 40px;
+          border-bottom: 1px solid #e8e4de;
+          background: #f4f2ee;
         }
-        .rg-wordmark {
+
+        .land-wordmark {
           display: flex;
           align-items: center;
           gap: 8px;
@@ -117,409 +36,518 @@ export default function RoomGuardDashboard() {
           font-weight: 700;
           letter-spacing: -0.3px;
         }
-        .rg-wordmark-icon {
+
+        .land-wordmark-icon {
           width: 30px; height: 30px;
           background: #1a1a1a;
           border-radius: 8px;
           display: flex; align-items: center; justify-content: center;
         }
-        .rg-live-badge {
-          display: flex;
+
+        .land-nav-badge {
+          font-size: 11px;
+          font-weight: 600;
+          background: #1a1a1a;
+          color: #fff;
+          padding: 5px 12px;
+          border-radius: 20px;
+          font-family: 'DM Mono', monospace;
+        }
+
+        /* Hero */
+        .land-hero {
+          max-width: 760px;
+          margin: 0 auto;
+          padding: 80px 24px 60px;
+          text-align: center;
+        }
+
+        .land-eyebrow {
+          display: inline-flex;
           align-items: center;
           gap: 6px;
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          color: #888;
           background: #fff;
           border: 1px solid #e8e4de;
           border-radius: 20px;
-          padding: 5px 12px;
-          font-size: 12px;
-          font-weight: 500;
-          color: #555;
+          padding: 5px 14px;
+          margin-bottom: 28px;
           font-family: 'DM Mono', monospace;
         }
-        .rg-live-dot {
-          width: 7px; height: 7px;
+
+        .land-eyebrow-dot {
+          width: 6px; height: 6px;
           border-radius: 50%;
           background: #22c55e;
           animation: pulse 2s ease-in-out infinite;
         }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
-        .rg-banner {
-          background: #fff8ec;
-          border: 1.5px solid #fde68a;
-          border-radius: 14px;
-          padding: 12px 18px;
-          margin-bottom: 12px;
+        .land-h1 {
+          font-size: 56px;
+          font-weight: 800;
+          letter-spacing: -2.5px;
+          line-height: 1.05;
+          color: #1a1a1a;
+          margin-bottom: 20px;
+        }
+
+        .land-h1 span {
+          display: inline-block;
+          background: #1a1a1a;
+          color: #f4f2ee;
+          border-radius: 12px;
+          padding: 0 12px;
+        }
+
+        .land-sub {
+          font-size: 17px;
+          color: #666;
+          line-height: 1.6;
+          max-width: 500px;
+          margin: 0 auto 40px;
+        }
+
+        .land-cta-row {
           display: flex;
           align-items: center;
-          gap: 10px;
-          font-size: 13px;
-          font-weight: 500;
-          color: #92400e;
-        }
-        .rg-banner-icon {
-          width: 28px; height: 28px;
-          background: #fef3c7;
-          border-radius: 8px;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 14px;
-          flex-shrink: 0;
-        }
-
-        .rg-hero {
-          display: grid;
-          grid-template-columns: 1.1fr 0.9fr;
+          justify-content: center;
           gap: 12px;
-          margin-bottom: 12px;
+          flex-wrap: wrap;
         }
 
-        .rg-status-card {
-          border-radius: 16px;
-          padding: 22px;
-          min-height: 170px;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          transition: background 0.4s ease;
-        }
-        .rg-status-card.occupied { background: #1a1a1a; }
-        .rg-status-card.vacant   { background: #d4f5d4; }
-
-        .rg-room-tag {
+        .land-btn-primary {
           display: inline-flex;
           align-items: center;
-          font-size: 11px;
-          font-weight: 600;
-          padding: 4px 10px;
-          border-radius: 20px;
-          width: fit-content;
-        }
-        .occupied .rg-room-tag { background: rgba(255,255,255,0.1); color: #aaa; }
-        .vacant   .rg-room-tag { background: rgba(0,0,0,0.07);      color: #4a7a4a; }
-
-        .rg-status-big {
-          font-size: 40px;
-          font-weight: 700;
-          letter-spacing: -1.5px;
-          line-height: 1;
-          margin-top: 16px;
-        }
-        .occupied .rg-status-big { color: #fff; }
-        .vacant   .rg-status-big { color: #1a4d1a; }
-
-        .rg-status-sub {
-          font-size: 12px;
-          margin-top: 6px;
-          font-family: 'DM Mono', monospace;
-        }
-        .occupied .rg-status-sub { color: #666; }
-        .vacant   .rg-status-sub { color: #5a8a5a; }
-
-        .rg-sensor-card {
-          background: #fff;
-          border-radius: 16px;
-          padding: 22px;
-        }
-        .rg-sensor-label {
-          font-size: 11px;
-          font-weight: 600;
-          color: #aaa;
-          letter-spacing: 0.4px;
-          text-transform: uppercase;
-          margin-bottom: 14px;
-        }
-        .rg-dist-row {
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
-        }
-        .rg-dist-num {
-          font-size: 46px;
-          font-weight: 700;
-          letter-spacing: -2px;
-          line-height: 1;
-        }
-        .rg-dist-unit {
+          gap: 8px;
+          background: #1a1a1a;
+          color: #fff;
           font-size: 14px;
-          color: #bbb;
-          margin-left: 2px;
-          font-family: 'DM Mono', monospace;
-          padding-bottom: 6px;
-        }
-        .rg-vib-pill {
-          font-size: 11px;
           font-weight: 600;
-          padding: 5px 11px;
-          border-radius: 20px;
-          font-family: 'DM Mono', monospace;
-          transition: all 0.3s;
+          padding: 13px 24px;
+          border-radius: 12px;
+          border: none;
+          cursor: pointer;
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          transition: opacity 0.15s;
         }
-        .rg-vib-pill.on  { background: #dcfce7; color: #16a34a; }
-        .rg-vib-pill.off { background: #f3f4f6; color: #bbb; }
+        .land-btn-primary:hover { opacity: 0.85; }
 
-        .rg-track {
-          margin-top: 16px;
-          height: 6px;
-          background: #f0ede8;
-          border-radius: 10px;
-          overflow: hidden;
-        }
-        .rg-track-fill {
-          height: 100%;
-          border-radius: 10px;
-          transition: width 0.5s ease, background 0.3s;
-        }
-        .rg-track-labels {
-          display: flex;
-          justify-content: space-between;
-          font-size: 10px;
-          color: #ccc;
-          margin-top: 5px;
-          font-family: 'DM Mono', monospace;
-        }
-
-        .rg-stats {
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
-          gap: 12px;
-          margin-bottom: 12px;
-        }
-        .rg-stat {
+        .land-btn-secondary {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
           background: #fff;
-          border-radius: 16px;
-          padding: 18px 20px;
-        }
-        .rg-stat-label {
-          font-size: 11px;
+          color: #1a1a1a;
+          font-size: 14px;
           font-weight: 600;
-          color: #bbb;
-          text-transform: uppercase;
-          letter-spacing: 0.4px;
-          margin-bottom: 8px;
+          padding: 13px 24px;
+          border-radius: 12px;
+          border: 1px solid #e8e4de;
+          cursor: pointer;
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          transition: background 0.15s;
         }
-        .rg-stat-num {
+        .land-btn-secondary:hover { background: #f0ede8; }
+
+        /* Stats strip */
+        .land-stats {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 48px;
+          padding: 32px 24px;
+          border-top: 1px solid #e8e4de;
+          border-bottom: 1px solid #e8e4de;
+          background: #fff;
+          flex-wrap: wrap;
+        }
+
+        .land-stat-item { text-align: center; }
+        .land-stat-num {
           font-size: 28px;
           font-weight: 700;
           letter-spacing: -0.5px;
           color: #1a1a1a;
         }
-        .rg-stat-num.amber { color: #d97706; }
-        .rg-stat-num.green { color: #16a34a; }
-        .rg-stat-unit {
-          font-size: 14px;
-          color: #bbb;
+        .land-stat-label {
+          font-size: 12px;
+          color: #aaa;
+          margin-top: 2px;
           font-family: 'DM Mono', monospace;
         }
 
-        .rg-events {
+        /* Campus cards */
+        .land-campuses {
+          max-width: 760px;
+          margin: 0 auto;
+          padding: 56px 24px 80px;
+        }
+
+        .land-section-label {
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          color: #aaa;
+          margin-bottom: 20px;
+          font-family: 'DM Mono', monospace;
+        }
+
+        .land-campus-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+
+        .land-campus-card {
           background: #fff;
+          border: 1px solid #e8e4de;
           border-radius: 16px;
+          padding: 24px;
+          cursor: pointer;
+          transition: border-color 0.15s, transform 0.15s;
+          position: relative;
           overflow: hidden;
         }
-        .rg-events-header {
-          padding: 18px 20px 14px;
+        .land-campus-card:hover {
+          border-color: #1a1a1a;
+          transform: translateY(-1px);
+        }
+        .land-campus-card.active {
+          border-color: #1a1a1a;
+          border-width: 2px;
+        }
+        .land-campus-card.inactive {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .land-campus-card.inactive:hover {
+          border-color: #e8e4de;
+          transform: none;
+        }
+
+        .land-campus-top {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          margin-bottom: 16px;
+        }
+
+        .land-campus-icon {
+          width: 40px; height: 40px;
+          background: #f4f2ee;
+          border-radius: 10px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 20px;
+        }
+
+        .land-campus-badge {
+          font-size: 10px;
+          font-weight: 600;
+          padding: 3px 8px;
+          border-radius: 20px;
+          font-family: 'DM Mono', monospace;
+        }
+        .land-campus-badge.live { background: #dcfce7; color: #16a34a; }
+        .land-campus-badge.soon { background: #f3f4f6; color: #aaa; }
+
+        .land-campus-name {
+          font-size: 18px;
+          font-weight: 700;
+          letter-spacing: -0.3px;
+          margin-bottom: 4px;
+        }
+
+        .land-campus-sub {
+          font-size: 12px;
+          color: #aaa;
+          font-family: 'DM Mono', monospace;
+        }
+
+        .land-campus-rooms {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 16px;
+          font-size: 12px;
+          color: #555;
+          font-weight: 500;
+        }
+
+        .land-room-dot {
+          width: 8px; height: 8px;
+          border-radius: 50%;
+        }
+        .land-room-dot.green { background: #22c55e; }
+        .land-room-dot.gray  { background: #e0e0e0; }
+
+        /* How it works */
+        .land-how {
+          background: #1a1a1a;
+          padding: 64px 24px;
+        }
+
+        .land-how-inner {
+          max-width: 760px;
+          margin: 0 auto;
+        }
+
+        .land-how-label {
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          color: #555;
+          margin-bottom: 12px;
+          font-family: 'DM Mono', monospace;
+        }
+
+        .land-how-title {
+          font-size: 32px;
+          font-weight: 700;
+          letter-spacing: -1px;
+          color: #fff;
+          margin-bottom: 40px;
+        }
+
+        .land-steps {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 24px;
+        }
+
+        .land-step {
+          padding: 24px;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 16px;
+        }
+
+        .land-step-num {
+          font-size: 11px;
+          font-weight: 600;
+          color: #444;
+          font-family: 'DM Mono', monospace;
+          margin-bottom: 12px;
+        }
+
+        .land-step-title {
+          font-size: 15px;
+          font-weight: 600;
+          color: #fff;
+          margin-bottom: 8px;
+        }
+
+        .land-step-body {
+          font-size: 13px;
+          color: #666;
+          line-height: 1.6;
+        }
+
+        /* Footer */
+        .land-footer {
+          padding: 24px 40px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          border-bottom: 1px solid #f5f2ee;
-        }
-        .rg-events-title { font-size: 14px; font-weight: 600; }
-        .rg-events-badge {
-          font-size: 11px;
-          font-family: 'DM Mono', monospace;
-          color: #bbb;
+          border-top: 1px solid #e8e4de;
         }
 
-        table.rg-table { width: 100%; border-collapse: collapse; }
-        .rg-table th {
-          text-align: left;
-          padding: 10px 20px;
-          font-size: 11px;
-          font-weight: 600;
-          color: #bbb;
-          letter-spacing: 0.3px;
-          text-transform: uppercase;
-        }
-        .rg-table td {
-          padding: 10px 20px;
-          border-top: 1px solid #f5f2ee;
+        .land-footer-left {
           font-size: 12px;
-          font-family: 'DM Mono', monospace;
-          color: #555;
-        }
-        .rg-chip {
-          display: inline-block;
-          padding: 3px 9px;
-          border-radius: 20px;
-          font-size: 10px;
-          font-weight: 600;
-          font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-        .rg-chip.occ { background: #1a1a1a; color: #fff; }
-        .rg-chip.vac { background: #d4f5d4; color: #1a4d1a; }
-
-        .rg-loading {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 400px;
-          font-size: 13px;
           color: #aaa;
-          gap: 8px;
           font-family: 'DM Mono', monospace;
         }
-        .rg-spinner {
-          width: 16px; height: 16px;
-          border: 2px solid #e5e5e5;
-          border-top-color: #1a1a1a;
-          border-radius: 50%;
-          animation: spin 0.7s linear infinite;
+
+        .land-footer-right {
+          font-size: 12px;
+          color: #aaa;
+          font-family: 'DM Mono', monospace;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
-      <div className="rg-page">
-        {/* Nav */}
-        <nav className="rg-nav">
-          <div className="rg-wordmark">
-            <div className="rg-wordmark-icon">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="8" r="4" fill="white" />
-                <circle
-                  cx="8"
-                  cy="8"
-                  r="6.5"
-                  stroke="white"
-                  strokeWidth="1.5"
-                />
-              </svg>
-            </div>
-            RoomGuard
+      {/* Nav */}
+      <nav className="land-nav">
+        <div className="land-wordmark">
+          <div className="land-wordmark-icon">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="4" fill="white" />
+              <circle cx="8" cy="8" r="6.5" stroke="white" strokeWidth="1.5" />
+            </svg>
           </div>
-          <div className="rg-live-badge">
-            <div className="rg-live-dot" />
-            {clock}
-          </div>
-        </nav>
+          RoomGuard
+        </div>
+        <div className="land-nav-badge">StarkHacks 2026</div>
+      </nav>
 
-        {/* Auto-release banner — driven by shouldRelease from your API */}
-        {shouldRelease && (
-          <div className="rg-banner">
-            <div className="rg-banner-icon">⚠️</div>
-            <div>
-              Auto-release triggered — reservation flagged for cancellation
-            </div>
-          </div>
-        )}
+      {/* Hero */}
+      <section className="land-hero">
+        <div className="land-eyebrow">
+          <div className="land-eyebrow-dot" />
+          Live sensor data · ESP32-S3
+        </div>
+        <h1 className="land-h1">
+          Stop ghost
+          <br />
+          <span>reservations</span>
+        </h1>
+        <p className="land-sub">
+          RoomGuard uses hardware sensors to detect real occupancy — and
+          automatically frees study rooms when nobody's there.
+        </p>
+        <div className="land-cta-row">
+          <button
+            className="land-btn-primary"
+            onClick={() => router.push("/campus")}
+          >
+            View Purdue rooms →
+          </button>
+          <button
+            className="land-btn-secondary"
+            onClick={() => router.push("/room")}
+          >
+            Live sensor feed
+          </button>
+        </div>
+      </section>
 
-        {/* Loading state */}
-        {!data ? (
-          <div className="rg-loading">
-            <div className="rg-spinner" />
-            connecting to sensor…
-          </div>
-        ) : (
-          <>
-            {/* Hero */}
-            <div className="rg-hero">
-              <div
-                className={`rg-status-card ${occupied ? "occupied" : "vacant"}`}
-              >
-                <div className="rg-room-tag">Room 204 · Cahill Hall</div>
-                <div>
-                  <div className="rg-status-big">
-                    {occupied ? "Occupied" : "Vacant"}
-                  </div>
-                  <div className="rg-status-sub">
-                    {occupied
-                      ? "Room is in use"
-                      : `Empty for ${fmtEmpty(emptyMs)}`}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rg-sensor-card">
-                <div className="rg-sensor-label">Ultrasonic distance</div>
-                <div className="rg-dist-row">
-                  <div>
-                    <span className="rg-dist-num">{distance}</span>
-                    <span className="rg-dist-unit">cm</span>
-                  </div>
-                  {/* "vibrating" matches your API field name exactly */}
-                  <div className={`rg-vib-pill ${vibrating ? "on" : "off"}`}>
-                    {vibrating ? "vibration ✓" : "vibration —"}
-                  </div>
-                </div>
-                <div className="rg-track">
-                  <div
-                    className="rg-track-fill"
-                    style={{
-                      width: `${distPct}%`,
-                      background: distance < 50 ? "#1a1a1a" : "#22c55e",
-                    }}
-                  />
-                </div>
-                <div className="rg-track-labels">
-                  <span>0 cm</span>
-                  <span>50 cm threshold</span>
-                  <span>200 cm</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Stat cards */}
-            <div className="rg-stats">
-              <div className="rg-stat">
-                <div className="rg-stat-label">Events logged</div>
-                <div className="rg-stat-num">{history.length}</div>
-              </div>
-              <div className="rg-stat">
-                <div className="rg-stat-label">Vacant readings</div>
-                <div className="rg-stat-num amber">{vacantCount}</div>
-              </div>
-              <div className="rg-stat">
-                <div className="rg-stat-label">Avg distance</div>
-                <div className="rg-stat-num green">
-                  {avgDist}
-                  <span className="rg-stat-unit"> cm</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Event log — vibration not shown since it's not stored in DB */}
-            <div className="rg-events">
-              <div className="rg-events-header">
-                <div className="rg-events-title">Event log</div>
-                <div className="rg-events-badge">updating every 2s</div>
-              </div>
-              <table className="rg-table">
-                <thead>
-                  <tr>
-                    <th>Time</th>
-                    <th>Distance</th>
-                    <th>State</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((e, i) => (
-                    <tr key={i}>
-                      <td>{fmtTime(e.created_at)}</td>
-                      <td>{e.distance} cm</td>
-                      <td>
-                        <span
-                          className={`rg-chip ${e.occupied ? "occ" : "vac"}`}
-                        >
-                          {e.occupied ? "occupied" : "vacant"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+      {/* Stats strip */}
+      <div className="land-stats">
+        <div className="land-stat-item">
+          <div className="land-stat-num">~$8</div>
+          <div className="land-stat-label">hardware cost</div>
+        </div>
+        <div className="land-stat-item">
+          <div className="land-stat-num">2s</div>
+          <div className="land-stat-label">update interval</div>
+        </div>
+        <div className="land-stat-item">
+          <div className="land-stat-num">15 min</div>
+          <div className="land-stat-label">auto-release threshold</div>
+        </div>
+        <div className="land-stat-item">
+          <div className="land-stat-num">$50k+</div>
+          <div className="land-stat-label">enterprise alternatives</div>
+        </div>
       </div>
+
+      {/* Campus cards */}
+      <section className="land-campuses">
+        <div className="land-section-label">Select your campus</div>
+        <div className="land-campus-grid">
+          <div
+            className="land-campus-card active"
+            onClick={() => router.push("/campus")}
+          >
+            <div className="land-campus-top">
+              <div className="land-campus-icon">🚂</div>
+              <div className="land-campus-badge live">Live</div>
+            </div>
+            <div className="land-campus-name">Purdue University</div>
+            <div className="land-campus-sub">West Lafayette, IN</div>
+            <div className="land-campus-rooms">
+              <div className="land-room-dot green" />
+              <div className="land-room-dot green" />
+              <div className="land-room-dot gray" />
+              <div className="land-room-dot gray" />
+              <div className="land-room-dot gray" />
+              &nbsp;2 of 5 rooms monitored
+            </div>
+          </div>
+
+          <div className="land-campus-card inactive">
+            <div className="land-campus-top">
+              <div className="land-campus-icon">🌊</div>
+              <div className="land-campus-badge soon">Coming soon</div>
+            </div>
+            <div className="land-campus-name">UC San Diego</div>
+            <div className="land-campus-sub">La Jolla, CA</div>
+            <div className="land-campus-rooms">
+              <div className="land-room-dot gray" />
+              <div className="land-room-dot gray" />
+              <div className="land-room-dot gray" />
+              &nbsp;Deployment pending
+            </div>
+          </div>
+
+          <div className="land-campus-card inactive">
+            <div className="land-campus-top">
+              <div className="land-campus-icon">🌳</div>
+              <div className="land-campus-badge soon">Coming soon</div>
+            </div>
+            <div className="land-campus-name">Stanford University</div>
+            <div className="land-campus-sub">Palo Alto, CA</div>
+            <div className="land-campus-rooms">
+              <div className="land-room-dot gray" />
+              <div className="land-room-dot gray" />
+              <div className="land-room-dot gray" />
+              &nbsp;Deployment pending
+            </div>
+          </div>
+
+          <div className="land-campus-card inactive">
+            <div className="land-campus-top">
+              <div className="land-campus-icon">🦫</div>
+              <div className="land-campus-badge soon">Coming soon</div>
+            </div>
+            <div className="land-campus-name">MIT</div>
+            <div className="land-campus-sub">Cambridge, MA</div>
+            <div className="land-campus-rooms">
+              <div className="land-room-dot gray" />
+              <div className="land-room-dot gray" />
+              <div className="land-room-dot gray" />
+              &nbsp;Deployment pending
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="land-how">
+        <div className="land-how-inner">
+          <div className="land-how-label">How it works</div>
+          <div className="land-how-title">Hardware meets software</div>
+          <div className="land-steps">
+            <div className="land-step">
+              <div className="land-step-num">01</div>
+              <div className="land-step-title">Sensor detects presence</div>
+              <div className="land-step-body">
+                An ESP32-S3 with ultrasonic + vibration sensors checks the room
+                every 2 seconds.
+              </div>
+            </div>
+            <div className="land-step">
+              <div className="land-step-num">02</div>
+              <div className="land-step-title">Data hits the cloud</div>
+              <div className="land-step-body">
+                Readings are posted to a Next.js API on Vercel and logged to
+                PostgreSQL in real time.
+              </div>
+            </div>
+            <div className="land-step">
+              <div className="land-step-num">03</div>
+              <div className="land-step-title">Room auto-releases</div>
+              <div className="land-step-body">
+                If nobody's detected for 15 minutes, the reservation is flagged
+                for cancellation.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="land-footer">
+        <div className="land-footer-left">RoomGuard · StarkHacks 2026</div>
+        <div className="land-footer-right">
+          Built with ESP32 · Next.js · Neon
+        </div>
+      </footer>
     </>
   );
 }
