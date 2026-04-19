@@ -10,7 +10,6 @@ interface SensorResponse {
   vibrating: boolean;
 }
 
-// ── Animation variants ─────────────────────────────────────────────────────
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   visible: {
@@ -58,7 +57,6 @@ const staggerChild = {
   },
 };
 
-// ── Resizing Navbar ────────────────────────────────────────────────────────
 function ResizingNavbar({ router }: { router: any }) {
   const { scrollY } = useScroll();
   const [shrunk, setShrunk] = useState(false);
@@ -81,13 +79,11 @@ function ResizingNavbar({ router }: { router: any }) {
         width: shrunk ? "640px" : "94%",
         maxWidth: shrunk ? "640px" : "1140px",
         y: shrunk ? 12 : 16,
-        backdropFilter: shrunk ? "blur(14px)" : "blur(0px)",
-        backgroundColor: shrunk
-          ? "rgba(244,242,238,0.85)"
-          : "rgba(244,242,238,0)",
-        borderColor: shrunk ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0)",
+        backdropFilter: shrunk ? "blur(20px)" : "blur(0px)",
+        backgroundColor: shrunk ? "rgba(15,15,15,0.7)" : "rgba(15,15,15,0)",
+        borderColor: shrunk ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0)",
         boxShadow: shrunk
-          ? "0 6px 24px rgba(0,0,0,0.06)"
+          ? "0 8px 32px rgba(0,0,0,0.4)"
           : "0 0 0 rgba(0,0,0,0)",
       }}
       transition={{ type: "spring" as const, stiffness: 200, damping: 30 }}
@@ -136,7 +132,6 @@ function ResizingNavbar({ router }: { router: any }) {
   );
 }
 
-// ── Main ───────────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const router = useRouter();
   const [time, setTime] = useState("");
@@ -168,7 +163,6 @@ export default function LandingPage() {
     return () => clearInterval(id);
   }, []);
 
-  // Safely handle null distance
   const distanceText =
     sensor?.distance !== null && sensor?.distance !== undefined
       ? `${sensor.distance}cm`
@@ -182,10 +176,14 @@ export default function LandingPage() {
         : `Vacant · ${distanceText}`;
 
   const sensorColor =
-    sensor === null ? "#999" : sensor.occupied ? "#c87137" : "#1a4d1a";
+    sensor === null ? "#888" : sensor.occupied ? "#f59e0b" : "#4ade80";
 
   const sensorBg =
-    sensor === null ? "#f3f4f6" : sensor.occupied ? "#fef3c7" : "#d4f5d4";
+    sensor === null
+      ? "rgba(255,255,255,0.06)"
+      : sensor.occupied
+        ? "rgba(245,158,11,0.15)"
+        : "rgba(74,222,128,0.15)";
 
   return (
     <>
@@ -194,37 +192,35 @@ export default function LandingPage() {
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        html, body {
-          font-family: 'Inter', sans-serif;
-          color: #1a1a1a;
-          min-height: 100vh;
-        }
+        html { scroll-behavior: smooth; }
 
-        /* ── Body gradient background ────────────────────────────── */
         body {
+          font-family: 'Inter', sans-serif;
+          color: #f0ece4;
+          min-height: 100vh;
+          /* Deep dark gradient base */
           background:
-            radial-gradient(ellipse 1200px 600px at 50% 0%, #f4f2ee 0%, #ede9e2 40%, #d4cec3 100%),
-            linear-gradient(180deg, #f4f2ee 0%, #2a2a2a 200%);
+            radial-gradient(ellipse 80% 60% at 15% 10%, rgba(200,113,55,0.22) 0%, transparent 55%),
+            radial-gradient(ellipse 60% 50% at 85% 85%, rgba(74,222,128,0.12) 0%, transparent 55%),
+            linear-gradient(150deg, #2a1f14 0%, #1a2318 45%, #141420 100%);
           background-attachment: fixed;
-          position: relative;
         }
 
-        /* Subtle noise/grain overlay */
+        /* Glossy orb overlays */
         body::before {
           content: '';
           position: fixed;
           inset: 0;
-          background-image:
-            radial-gradient(circle at 20% 30%, rgba(200,113,55,0.06) 0%, transparent 50%),
-            radial-gradient(circle at 80% 70%, rgba(26,26,26,0.08) 0%, transparent 50%);
+          background:
+            radial-gradient(circle 600px at 15% 25%, rgba(200,113,55,0.12) 0%, transparent 70%),
+            radial-gradient(circle 500px at 85% 75%, rgba(74,222,128,0.08) 0%, transparent 70%);
           pointer-events: none;
           z-index: 0;
         }
 
-        /* All content sits above the gradient */
         .ed-nav, .ed-wrap { position: relative; z-index: 1; }
 
-        /* ── Resizing nav ────────────────────────────────────────── */
+        /* ── Nav ──────────────────────────────── */
         .ed-nav {
           position: fixed;
           top: 0;
@@ -238,7 +234,6 @@ export default function LandingPage() {
           border-radius: 999px;
           border: 1px solid transparent;
           z-index: 100;
-          -webkit-backdrop-filter: blur(0px);
         }
 
         .ed-nav-logo {
@@ -250,52 +245,49 @@ export default function LandingPage() {
           align-items: center;
           gap: 8px;
           cursor: pointer;
+          color: #f0ece4;
           flex-shrink: 0;
         }
         .ed-nav-logo::before {
           content: '';
           width: 9px; height: 9px;
           border-radius: 50%;
-          background: #1a1a1a;
+          background: #f0ece4;
         }
 
-        .ed-nav-items {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
+        .ed-nav-items { display: flex; align-items: center; gap: 4px; }
 
         .ed-nav-item {
           position: relative;
           padding: 8px 14px;
           font-size: 13px;
           font-weight: 500;
-          color: #555;
+          color: rgba(240,236,228,0.6);
           cursor: pointer;
           border-radius: 999px;
           transition: color 0.2s;
         }
-        .ed-nav-item:hover { color: #1a1a1a; }
+        .ed-nav-item:hover { color: #f0ece4; }
 
         .ed-nav-pill {
           position: absolute;
           inset: 0;
-          background: rgba(0,0,0,0.06);
+          background: rgba(255,255,255,0.08);
           border-radius: 999px;
           z-index: 1;
         }
 
         .ed-nav-cta {
-          background: #1a1a1a;
-          color: #fff;
+          background: rgba(240,236,228,0.9);
+          color: #0f0c08;
           font-size: 12px;
-          font-weight: 500;
+          font-weight: 600;
           padding: 9px 16px;
           border-radius: 999px;
           border: none;
           cursor: pointer;
           font-family: 'Inter', sans-serif;
-          transition: opacity 0.15s;
+          transition: opacity 0.15s, background 0.15s;
           white-space: nowrap;
           flex-shrink: 0;
         }
@@ -304,13 +296,12 @@ export default function LandingPage() {
         @media (max-width: 720px) {
           .ed-nav { padding: 8px 10px 8px 18px; }
           .ed-nav-items { display: none; }
-          .ed-nav-logo { font-size: 17px; }
           .ed-nav-cta { font-size: 11px; padding: 7px 12px; }
         }
 
         .ed-wrap { max-width: 1200px; margin: 0 auto; padding-top: 72px; }
 
-        /* ── Hero ────────────────────────────────────────────────── */
+        /* ── Hero ─────────────────────────────── */
         .ed-hero-wrap {
           position: relative;
           padding: 16px 32px 0;
@@ -320,30 +311,35 @@ export default function LandingPage() {
           height: 420px;
           overflow: hidden;
           border-radius: 20px;
-          background: #8b5a2b;
+          background: #1a1008;
+          /* Glass border */
+          border: 1px solid rgba(255,255,255,0.1);
+          box-shadow: 0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
         }
         .ed-hero-img {
           position: absolute; inset: 0;
           width: 100%; height: 100%;
           object-fit: cover;
-          filter: saturate(1.05) contrast(1.02);
+          filter: saturate(0.9) brightness(0.85) contrast(1.05);
         }
         .ed-hero-gradient {
           position: absolute; inset: 0;
-          background: linear-gradient(to bottom, rgba(0,0,0,0) 30%, rgba(0,0,0,0.7) 100%);
+          background: linear-gradient(to bottom, rgba(0,0,0,0.1) 20%, rgba(0,0,0,0.75) 100%);
         }
         .ed-hero-tag {
           position: absolute;
           top: 20px; left: 20px;
-          background: rgba(255,255,255,0.95);
-          backdrop-filter: blur(8px);
+          background: rgba(255,255,255,0.1);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(255,255,255,0.15);
           padding: 7px 14px;
           border-radius: 20px;
           font-family: 'JetBrains Mono', monospace;
           font-size: 11px;
           font-weight: 600;
           letter-spacing: 1px;
-          color: #1a1a1a;
+          color: rgba(255,255,255,0.9);
           display: flex;
           align-items: center;
           gap: 7px;
@@ -352,7 +348,7 @@ export default function LandingPage() {
           content: '';
           width: 7px; height: 7px;
           border-radius: 50%;
-          background: #22c55e;
+          background: #4ade80;
           animation: pulse 2s ease-in-out infinite;
         }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
@@ -370,7 +366,7 @@ export default function LandingPage() {
           font-size: 11px;
           letter-spacing: 2px;
           text-transform: uppercase;
-          opacity: 0.85;
+          opacity: 0.7;
           margin-bottom: 6px;
         }
         .ed-hero-campus {
@@ -384,19 +380,22 @@ export default function LandingPage() {
           font-family: 'JetBrains Mono', monospace;
           font-size: 12px;
           text-align: right;
-          opacity: 0.85;
+          opacity: 0.7;
           line-height: 1.7;
         }
 
+        /* Floating sensor card — glass */
         .ed-float {
           position: absolute;
           right: 56px;
           bottom: -44px;
-          background: #fff;
-          border: 1px solid #e8e4de;
+          background: rgba(20,18,14,0.7);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255,255,255,0.12);
           border-radius: 16px;
           padding: 16px 20px;
-          box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+          box-shadow: 0 16px 48px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
           display: flex;
           align-items: center;
           gap: 14px;
@@ -412,12 +411,13 @@ export default function LandingPage() {
           font-size: 20px;
           flex-shrink: 0;
           transition: background 0.3s;
+          border: 1px solid rgba(255,255,255,0.08);
         }
         .ed-float-label {
           font-family: 'JetBrains Mono', monospace;
           font-size: 10px;
           letter-spacing: 1px;
-          color: #999;
+          color: rgba(240,236,228,0.4);
           text-transform: uppercase;
           margin-bottom: 3px;
         }
@@ -431,10 +431,11 @@ export default function LandingPage() {
         .ed-float-detail {
           font-family: 'JetBrains Mono', monospace;
           font-size: 10px;
-          color: #bbb;
+          color: rgba(240,236,228,0.3);
           margin-top: 2px;
         }
 
+        /* ── Main ─────────────────────────────── */
         .ed-main { padding: 80px 32px 40px; }
 
         .ed-grid {
@@ -449,7 +450,7 @@ export default function LandingPage() {
           font-size: 11px;
           letter-spacing: 2px;
           text-transform: uppercase;
-          color: #999;
+          color: rgba(240,236,228,0.35);
           margin-bottom: 20px;
           display: flex;
           align-items: center;
@@ -457,12 +458,12 @@ export default function LandingPage() {
         }
         .ed-issue::before {
           content: '';
-          height: 1px; background: #d0cdc5;
+          height: 1px; background: rgba(240,236,228,0.15);
           flex: 0 0 24px;
         }
         .ed-issue::after {
           content: '';
-          height: 1px; background: #d0cdc5;
+          height: 1px; background: rgba(240,236,228,0.15);
           flex: 1;
         }
         .ed-headline {
@@ -471,7 +472,7 @@ export default function LandingPage() {
           font-weight: 400;
           line-height: 0.95;
           letter-spacing: -3.5px;
-          color: #1a1a1a;
+          color: #f0ece4;
         }
         .ed-headline em {
           font-style: italic;
@@ -488,9 +489,10 @@ export default function LandingPage() {
           left: -4px; right: -4px;
           bottom: 8px;
           height: 14px;
-          background: #fef3c7;
+          background: rgba(200,113,55,0.2);
           z-index: -1;
           transform: skew(-2deg);
+          border-radius: 3px;
         }
         .ed-actions {
           display: flex; flex-direction: column;
@@ -500,10 +502,10 @@ export default function LandingPage() {
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          background: #1a1a1a;
-          color: #fff;
+          background: rgba(240,236,228,0.92);
+          color: #0f0c08;
           font-size: 14px;
-          font-weight: 500;
+          font-weight: 600;
           padding: 13px 24px;
           border-radius: 30px;
           cursor: pointer;
@@ -515,7 +517,7 @@ export default function LandingPage() {
         .ed-btn:hover { opacity: 0.85; }
         .ed-btn-secondary {
           background: transparent;
-          color: #888;
+          color: rgba(240,236,228,0.4);
           font-family: 'JetBrains Mono', monospace;
           font-size: 11px;
           letter-spacing: 0.5px;
@@ -524,8 +526,9 @@ export default function LandingPage() {
           border: none;
           transition: color 0.15s;
         }
-        .ed-btn-secondary:hover { color: #1a1a1a; }
+        .ed-btn-secondary:hover { color: rgba(240,236,228,0.8); }
 
+        /* ── Glass cards ──────────────────────── */
         .ed-split {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -535,13 +538,18 @@ export default function LandingPage() {
         .ed-split-card {
           border-radius: 18px;
           padding: 26px;
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
         }
         .ed-split-card.problem {
-          background: #fff;
-          border: 1px solid #e8e4de;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 32px rgba(0,0,0,0.3);
         }
         .ed-split-card.solution {
-          background: #1a1a1a;
+          background: rgba(240,236,228,0.06);
+          border: 1px solid rgba(255,255,255,0.1);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.3);
         }
         .ed-split-label {
           font-family: 'JetBrains Mono', monospace;
@@ -554,7 +562,7 @@ export default function LandingPage() {
           gap: 6px;
         }
         .problem .ed-split-label { color: #c87137; }
-        .solution .ed-split-label { color: #86efac; }
+        .solution .ed-split-label { color: #4ade80; }
         .ed-split-label::before {
           content: '';
           width: 6px; height: 6px;
@@ -568,15 +576,13 @@ export default function LandingPage() {
           letter-spacing: -0.6px;
           line-height: 1.15;
           margin-bottom: 12px;
-          color: #1a1a1a;
+          color: #f0ece4;
         }
-        .solution .ed-split-title { color: #fff; }
         .ed-split-body {
           font-size: 14px;
           line-height: 1.6;
-          color: #666;
+          color: rgba(240,236,228,0.5);
         }
-        .solution .ed-split-body { color: #888; }
         .ed-split-tag {
           margin-top: 18px;
           display: inline-block;
@@ -585,27 +591,40 @@ export default function LandingPage() {
           padding: 4px 10px;
           border-radius: 20px;
           letter-spacing: 0.5px;
+          border: 1px solid;
         }
-        .problem .ed-split-tag { background: #fef2f2; color: #c11; }
-        .solution .ed-split-tag { background: rgba(134,239,172,0.12); color: #86efac; }
+        .problem .ed-split-tag {
+          background: rgba(200,113,55,0.1);
+          border-color: rgba(200,113,55,0.3);
+          color: #c87137;
+        }
+        .solution .ed-split-tag {
+          background: rgba(74,222,128,0.08);
+          border-color: rgba(74,222,128,0.2);
+          color: #4ade80;
+        }
 
+        /* Numbers — glass */
         .ed-numbers {
           display: grid;
           grid-template-columns: 1fr 1fr 1fr 1fr;
-          background: #fff;
-          border: 1px solid #e8e4de;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.08);
           border-radius: 18px;
           overflow: hidden;
           margin-bottom: 48px;
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 8px 32px rgba(0,0,0,0.3);
         }
-        .ed-num { padding: 24px 22px; border-right: 1px solid #e8e4de; }
+        .ed-num { padding: 24px 22px; border-right: 1px solid rgba(255,255,255,0.06); }
         .ed-num:last-child { border-right: none; }
         .ed-num-label {
           font-family: 'JetBrains Mono', monospace;
           font-size: 10px;
           letter-spacing: 2px;
           text-transform: uppercase;
-          color: #999;
+          color: rgba(240,236,228,0.35);
           margin-bottom: 8px;
         }
         .ed-num-val {
@@ -614,22 +633,23 @@ export default function LandingPage() {
           font-weight: 500;
           letter-spacing: -1px;
           line-height: 1;
-          color: #1a1a1a;
+          color: #f0ece4;
         }
         .ed-num-val em {
           font-family: 'JetBrains Mono', monospace;
           font-size: 13px;
           font-style: normal;
-          color: #999;
+          color: rgba(240,236,228,0.35);
           margin-left: 3px;
         }
 
+        /* How it works */
         .ed-how-label {
           font-family: 'JetBrains Mono', monospace;
           font-size: 11px;
           letter-spacing: 2px;
           text-transform: uppercase;
-          color: #999;
+          color: rgba(240,236,228,0.35);
           margin-bottom: 14px;
         }
         .ed-how-title {
@@ -638,20 +658,29 @@ export default function LandingPage() {
           font-weight: 500;
           letter-spacing: -1.5px;
           line-height: 1;
-          color: #1a1a1a;
+          color: #f0ece4;
           margin-bottom: 40px;
         }
         .ed-how-title em { font-style: italic; color: #c87137; }
+
         .ed-steps {
           display: grid;
           grid-template-columns: 1fr 1fr 1fr;
           gap: 12px;
         }
         .ed-step {
-          background: #fff;
-          border: 1px solid #e8e4de;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.08);
           border-radius: 18px;
           padding: 24px;
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+          transition: background 0.2s, border-color 0.2s;
+        }
+        .ed-step:hover {
+          background: rgba(255,255,255,0.05);
+          border-color: rgba(255,255,255,0.14);
         }
         .ed-step-num {
           font-family: 'Fraunces', serif;
@@ -662,39 +691,43 @@ export default function LandingPage() {
           letter-spacing: -2px;
           line-height: 1;
           margin-bottom: 14px;
+          opacity: 0.8;
         }
         .ed-step-title {
           font-size: 16px;
           font-weight: 600;
           letter-spacing: -0.3px;
           margin-bottom: 8px;
+          color: #f0ece4;
         }
         .ed-step-body {
           font-size: 13px;
           line-height: 1.6;
-          color: #666;
+          color: rgba(240,236,228,0.5);
         }
         .ed-step-chip {
           margin-top: 14px;
           display: inline-block;
           font-family: 'JetBrains Mono', monospace;
           font-size: 10px;
-          color: #999;
-          background: #f4f2ee;
+          color: rgba(240,236,228,0.35);
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.08);
           padding: 3px 9px;
           border-radius: 20px;
         }
 
+        /* Footer */
         .ed-footer {
           margin: 0 32px;
           padding: 28px 0;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          border-top: 1px solid #d0cdc5;
+          border-top: 1px solid rgba(255,255,255,0.08);
           font-family: 'JetBrains Mono', monospace;
           font-size: 11px;
-          color: #999;
+          color: rgba(240,236,228,0.3);
           letter-spacing: 0.5px;
         }
 
@@ -705,7 +738,7 @@ export default function LandingPage() {
           .ed-split { grid-template-columns: 1fr; }
           .ed-numbers { grid-template-columns: 1fr 1fr; }
           .ed-num:nth-child(2) { border-right: none; }
-          .ed-num:nth-child(1), .ed-num:nth-child(2) { border-bottom: 1px solid #e8e4de; }
+          .ed-num:nth-child(1), .ed-num:nth-child(2) { border-bottom: 1px solid rgba(255,255,255,0.06); }
           .ed-steps { grid-template-columns: 1fr; }
           .ed-hero { height: 320px; }
           .ed-float { right: 20px; }
@@ -729,7 +762,7 @@ export default function LandingPage() {
             <img
               className="ed-hero-img"
               src="/purdue.jpg"
-              alt="Purdue University campus"
+              alt="Purdue University"
             />
             <div className="ed-hero-gradient" />
             <div className="ed-hero-tag">sensor online · Room 204</div>
@@ -766,7 +799,6 @@ export default function LandingPage() {
         </motion.div>
 
         <div className="ed-main">
-          {/* viewport={{ once: false }} = replays every scroll */}
           <motion.div
             className="ed-grid"
             initial="hidden"

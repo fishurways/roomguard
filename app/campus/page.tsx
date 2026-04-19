@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 interface SensorResponse {
   occupied: boolean;
@@ -10,7 +11,6 @@ interface SensorResponse {
   shouldRelease: boolean;
 }
 
-// Static rooms — only Room 204 is real (live sensor)
 const ROOMS = [
   {
     id: "204",
@@ -62,13 +62,60 @@ const ROOMS = [
   },
 ];
 
-// Static states for non-live rooms (just for display)
-const STATIC_STATES: Record<string, { occupied: boolean; label: string }> = {
-  "101": { occupied: false, label: "Vacant" },
-  "310": { occupied: true, label: "Occupied" },
-  "205": { occupied: false, label: "Vacant" },
-  "412": { occupied: true, label: "Occupied" },
-  "202": { occupied: false, label: "Vacant" },
+const STATIC_STATES: Record<string, { occupied: boolean }> = {
+  "101": { occupied: false },
+  "310": { occupied: true },
+  "205": { occupied: false },
+  "412": { occupied: true },
+  "202": { occupied: false },
+};
+
+// ── Animation variants ──────────────────────────────────────────────────
+const fadeDown = {
+  hidden: { opacity: 0, y: -12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const },
+  },
+};
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const },
+  },
+};
+
+const staggerContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08 } },
+};
+
+const staggerChild = {
+  hidden: { opacity: 0, y: 20, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const },
+  },
+};
+
+const pillStagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.07, delayChildren: 0.3 } },
+};
+
+const pillChild = {
+  hidden: { opacity: 0, x: -10 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const },
+  },
 };
 
 export default function CampusPage() {
@@ -94,20 +141,46 @@ export default function CampusPage() {
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+        html { scroll-behavior: smooth; }
+
         body {
           font-family: 'Plus Jakarta Sans', sans-serif;
-          background: #f4f2ee;
-          color: #1a1a1a;
+          color: #f0ece4;
           min-height: 100vh;
+          /* Brighter — medium-dark, not pitch black */
+          background:
+            radial-gradient(ellipse 80% 60% at 15% 10%, rgba(200,113,55,0.22) 0%, transparent 55%),
+            radial-gradient(ellipse 60% 50% at 85% 85%, rgba(74,222,128,0.12) 0%, transparent 55%),
+            linear-gradient(150deg, #2a1f14 0%, #1a2318 45%, #141420 100%);
+          background-attachment: fixed;
         }
 
+        body::before {
+          content: '';
+          position: fixed;
+          inset: 0;
+          background:
+            radial-gradient(circle 700px at 10% 20%, rgba(200,113,55,0.1) 0%, transparent 65%),
+            radial-gradient(circle 500px at 90% 80%, rgba(74,222,128,0.07) 0%, transparent 65%);
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        .cp-nav, .cp-page { position: relative; z-index: 1; }
+
+        /* ── Nav ─────────────────────────────────── */
         .cp-nav {
           display: flex;
           align-items: center;
           justify-content: space-between;
           padding: 16px 32px;
-          border-bottom: 1px solid #e8e4de;
-          background: #f4f2ee;
+          border-bottom: 1px solid rgba(255,255,255,0.07);
+          background: rgba(30,22,14,0.5);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          position: sticky;
+          top: 0;
+          z-index: 50;
         }
 
         .cp-wordmark {
@@ -118,56 +191,56 @@ export default function CampusPage() {
           font-weight: 700;
           letter-spacing: -0.3px;
           cursor: pointer;
+          color: #f0ece4;
         }
 
         .cp-wordmark-icon {
           width: 28px; height: 28px;
-          background: #1a1a1a;
+          background: rgba(240,236,228,0.9);
           border-radius: 7px;
           display: flex; align-items: center; justify-content: center;
         }
 
+        .cp-wordmark-icon svg circle { }
+
         .cp-breadcrumb {
           font-size: 13px;
-          color: #aaa;
+          color: rgba(240,236,228,0.35);
           font-family: 'DM Mono', monospace;
           display: flex;
           align-items: center;
           gap: 8px;
         }
-
-        .cp-breadcrumb span { color: #1a1a1a; font-weight: 500; }
+        .cp-breadcrumb .active { color: #f0ece4; font-weight: 500; }
 
         .cp-live-badge {
           display: flex;
           align-items: center;
           gap: 6px;
-          background: #fff;
-          border: 1px solid #e8e4de;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.1);
           border-radius: 20px;
           padding: 4px 12px;
           font-size: 11px;
           font-weight: 500;
-          color: #555;
+          color: rgba(240,236,228,0.7);
           font-family: 'DM Mono', monospace;
+          backdrop-filter: blur(8px);
         }
 
         .cp-live-dot {
           width: 6px; height: 6px;
           border-radius: 50%;
-          background: #22c55e;
+          background: #4ade80;
           animation: pulse 2s ease-in-out infinite;
         }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
+        /* ── Page ────────────────────────────────── */
         .cp-page {
           max-width: 760px;
           margin: 0 auto;
           padding: 36px 24px 64px;
-        }
-
-        .cp-header {
-          margin-bottom: 32px;
         }
 
         .cp-eyebrow {
@@ -175,7 +248,7 @@ export default function CampusPage() {
           font-weight: 600;
           letter-spacing: 1px;
           text-transform: uppercase;
-          color: #aaa;
+          color: rgba(240,236,228,0.35);
           font-family: 'DM Mono', monospace;
           margin-bottom: 8px;
         }
@@ -184,19 +257,19 @@ export default function CampusPage() {
           font-size: 32px;
           font-weight: 800;
           letter-spacing: -1px;
-          color: #1a1a1a;
+          color: #f0ece4;
           margin-bottom: 6px;
         }
 
         .cp-sub {
           font-size: 14px;
-          color: #888;
+          color: rgba(240,236,228,0.45);
         }
 
-        /* Summary bar */
+        /* Summary pills */
         .cp-summary {
           display: flex;
-          gap: 12px;
+          gap: 10px;
           margin-bottom: 24px;
           flex-wrap: wrap;
         }
@@ -205,22 +278,20 @@ export default function CampusPage() {
           display: flex;
           align-items: center;
           gap: 6px;
-          background: #fff;
-          border: 1px solid #e8e4de;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.09);
           border-radius: 20px;
           padding: 6px 14px;
           font-size: 12px;
           font-weight: 500;
-          color: #555;
+          color: rgba(240,236,228,0.6);
+          backdrop-filter: blur(8px);
         }
 
-        .cp-pill-dot {
-          width: 7px; height: 7px;
-          border-radius: 50%;
-        }
-        .cp-pill-dot.green { background: #22c55e; }
-        .cp-pill-dot.red   { background: #ef4444; }
-        .cp-pill-dot.gray  { background: #d0d0d0; }
+        .cp-pill-dot { width: 7px; height: 7px; border-radius: 50%; }
+        .cp-pill-dot.green { background: #4ade80; }
+        .cp-pill-dot.red   { background: #f87171; }
+        .cp-pill-dot.gray  { background: rgba(240,236,228,0.2); }
 
         /* Room grid */
         .cp-grid {
@@ -230,33 +301,41 @@ export default function CampusPage() {
         }
 
         .cp-room-card {
-          background: #fff;
-          border: 1px solid #e8e4de;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
           border-radius: 16px;
           padding: 22px;
           cursor: pointer;
-          transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
           position: relative;
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 24px rgba(0,0,0,0.2);
+          transition: border-color 0.2s, background 0.2s, transform 0.2s, box-shadow 0.2s;
         }
 
         .cp-room-card:hover {
-          border-color: #1a1a1a;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+          border-color: rgba(255,255,255,0.18);
+          background: rgba(255,255,255,0.07);
+          transform: translateY(-2px);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.3);
         }
 
         .cp-room-card.live-card {
-          border-color: #1a1a1a;
-          border-width: 1.5px;
+          border-color: rgba(200,113,55,0.4);
+          background: rgba(200,113,55,0.06);
+          box-shadow: inset 0 1px 0 rgba(200,113,55,0.1), 0 4px 24px rgba(0,0,0,0.2);
+        }
+        .cp-room-card.live-card:hover {
+          border-color: rgba(200,113,55,0.6);
+          background: rgba(200,113,55,0.09);
         }
 
-        .cp-room-card.static-card {
-          cursor: default;
-        }
+        .cp-room-card.static-card { cursor: default; }
         .cp-room-card.static-card:hover {
-          border-color: #e8e4de;
+          border-color: rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.04);
           transform: none;
-          box-shadow: none;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 24px rgba(0,0,0,0.2);
         }
 
         .cp-room-top {
@@ -270,11 +349,12 @@ export default function CampusPage() {
           font-size: 17px;
           font-weight: 700;
           letter-spacing: -0.3px;
+          color: #f0ece4;
         }
 
         .cp-room-building {
           font-size: 12px;
-          color: #aaa;
+          color: rgba(240,236,228,0.35);
           margin-top: 2px;
           font-family: 'DM Mono', monospace;
         }
@@ -291,17 +371,26 @@ export default function CampusPage() {
           flex-shrink: 0;
         }
 
-        .cp-status-badge.occupied { background: #1a1a1a; color: #fff; }
-        .cp-status-badge.vacant   { background: #d4f5d4; color: #1a4d1a; }
-        .cp-status-badge.unknown  { background: #f3f4f6; color: #aaa; }
-
-        .cp-status-dot {
-          width: 5px; height: 5px;
-          border-radius: 50%;
+        .cp-status-badge.occupied {
+          background: rgba(240,236,228,0.1);
+          border: 1px solid rgba(240,236,228,0.15);
+          color: #f0ece4;
         }
-        .occupied .cp-status-dot { background: #fff; }
-        .vacant   .cp-status-dot { background: #22c55e; animation: pulse 2s ease-in-out infinite; }
-        .unknown  .cp-status-dot { background: #ccc; }
+        .cp-status-badge.vacant {
+          background: rgba(74,222,128,0.12);
+          border: 1px solid rgba(74,222,128,0.25);
+          color: #4ade80;
+        }
+        .cp-status-badge.unknown {
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.08);
+          color: rgba(240,236,228,0.4);
+        }
+
+        .cp-status-dot { width: 5px; height: 5px; border-radius: 50%; }
+        .occupied .cp-status-dot { background: rgba(240,236,228,0.6); }
+        .vacant   .cp-status-dot { background: #4ade80; animation: pulse 2s ease-in-out infinite; }
+        .unknown  .cp-status-dot { background: rgba(240,236,228,0.2); }
 
         .cp-room-meta {
           display: flex;
@@ -312,21 +401,20 @@ export default function CampusPage() {
 
         .cp-room-cap {
           font-size: 12px;
-          color: #bbb;
+          color: rgba(240,236,228,0.3);
           font-family: 'DM Mono', monospace;
         }
 
         .cp-live-tag {
           font-size: 10px;
           font-weight: 600;
-          color: #888;
+          color: rgba(240,236,228,0.25);
           font-family: 'DM Mono', monospace;
           display: flex;
           align-items: center;
           gap: 4px;
         }
-
-        .cp-live-tag.real { color: #16a34a; }
+        .cp-live-tag.real { color: #4ade80; }
 
         .cp-view-link {
           display: inline-flex;
@@ -335,23 +423,26 @@ export default function CampusPage() {
           margin-top: 14px;
           font-size: 12px;
           font-weight: 600;
-          color: #1a1a1a;
-          text-decoration: none;
-          background: #f4f2ee;
+          color: #f0ece4;
+          background: rgba(255,255,255,0.08);
+          border: 1px solid rgba(255,255,255,0.12);
           padding: 6px 12px;
           border-radius: 8px;
-          border: none;
           cursor: pointer;
           font-family: 'Plus Jakarta Sans', sans-serif;
-          transition: background 0.15s;
+          transition: background 0.15s, border-color 0.15s;
         }
-        .cp-view-link:hover { background: #ebe8e3; }
+        .cp-view-link:hover {
+          background: rgba(255,255,255,0.13);
+          border-color: rgba(255,255,255,0.2);
+        }
 
         .cp-sensor-badge {
           position: absolute;
           top: -1px;
           right: 16px;
-          background: #1a1a1a;
+          background: rgba(200,113,55,0.85);
+          backdrop-filter: blur(8px);
           color: #fff;
           font-size: 9px;
           font-weight: 600;
@@ -360,37 +451,56 @@ export default function CampusPage() {
           font-family: 'DM Mono', monospace;
           letter-spacing: 0.5px;
         }
+
+        @media (max-width: 600px) {
+          .cp-grid { grid-template-columns: 1fr; }
+          .cp-nav { padding: 12px 20px; }
+          .cp-breadcrumb { display: none; }
+        }
       `}</style>
 
       {/* Nav */}
-      <nav className="cp-nav">
+      <motion.nav
+        className="cp-nav"
+        initial="hidden"
+        animate="visible"
+        variants={fadeDown}
+      >
         <div className="cp-wordmark" onClick={() => router.push("/")}>
           <div className="cp-wordmark-icon">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="8" r="4" fill="white" />
-              <circle cx="8" cy="8" r="6.5" stroke="white" strokeWidth="1.5" />
+              <circle cx="8" cy="8" r="4" fill="#1a1a1a" />
+              <circle
+                cx="8"
+                cy="8"
+                r="6.5"
+                stroke="#1a1a1a"
+                strokeWidth="1.5"
+              />
             </svg>
           </div>
           RoomGuard
         </div>
         <div className="cp-breadcrumb">
-          <span
-            onClick={() => router.push("/")}
-            style={{ cursor: "pointer", color: "#aaa" }}
-          >
+          <span onClick={() => router.push("/")} style={{ cursor: "pointer" }}>
             Home
           </span>
-          →<span>Purdue</span>
+          →<span className="active">Purdue</span>
         </div>
         <div className="cp-live-badge">
           <div className="cp-live-dot" />
           live
         </div>
-      </nav>
+      </motion.nav>
 
       <div className="cp-page">
         {/* Header */}
-        <div className="cp-header">
+        <motion.div
+          style={{ marginBottom: 32 }}
+          initial="hidden"
+          animate="visible"
+          variants={fadeUp}
+        >
           <div className="cp-eyebrow">
             Purdue University · West Lafayette, IN
           </div>
@@ -398,38 +508,54 @@ export default function CampusPage() {
           <div className="cp-sub">
             Real-time occupancy powered by RoomGuard sensors
           </div>
-        </div>
+        </motion.div>
 
-        {/* Summary pills */}
-        <div className="cp-summary">
-          <div className="cp-summary-pill">
+        {/* Summary pills — stagger in */}
+        <motion.div
+          className="cp-summary"
+          initial="hidden"
+          animate="visible"
+          variants={pillStagger}
+        >
+          <motion.div className="cp-summary-pill" variants={pillChild}>
             <div className="cp-pill-dot green" />
             {
-              ROOMS.filter((r) => {
-                if (r.live) return liveData ? !liveData.occupied : false;
-                return !STATIC_STATES[r.id]?.occupied;
-              }).length
+              ROOMS.filter((r) =>
+                r.live
+                  ? liveData
+                    ? !liveData.occupied
+                    : false
+                  : !STATIC_STATES[r.id]?.occupied,
+              ).length
             }{" "}
             vacant
-          </div>
-          <div className="cp-summary-pill">
+          </motion.div>
+          <motion.div className="cp-summary-pill" variants={pillChild}>
             <div className="cp-pill-dot red" />
             {
-              ROOMS.filter((r) => {
-                if (r.live) return liveData ? liveData.occupied : false;
-                return STATIC_STATES[r.id]?.occupied;
-              }).length
+              ROOMS.filter((r) =>
+                r.live
+                  ? liveData
+                    ? liveData.occupied
+                    : false
+                  : STATIC_STATES[r.id]?.occupied,
+              ).length
             }{" "}
             occupied
-          </div>
-          <div className="cp-summary-pill">
+          </motion.div>
+          <motion.div className="cp-summary-pill" variants={pillChild}>
             <div className="cp-pill-dot gray" />
             {ROOMS.length} rooms total
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
-        {/* Room grid */}
-        <div className="cp-grid">
+        {/* Room grid — staggered cards */}
+        <motion.div
+          className="cp-grid"
+          initial="hidden"
+          animate="visible"
+          variants={staggerContainer}
+        >
           {ROOMS.map((room) => {
             const isLive = room.live;
             const occupied = isLive
@@ -457,9 +583,10 @@ export default function CampusPage() {
                 : "Vacant";
 
             return (
-              <div
+              <motion.div
                 key={room.id}
                 className={`cp-room-card ${isLive ? "live-card" : "static-card"}`}
+                variants={staggerChild}
                 onClick={() => isLive && router.push("/room")}
               >
                 {isLive && <div className="cp-sensor-badge">● SENSOR LIVE</div>}
@@ -492,10 +619,10 @@ export default function CampusPage() {
                     View live feed →
                   </button>
                 )}
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       </div>
     </>
   );
