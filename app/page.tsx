@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 
 interface SensorResponse {
   occupied: boolean;
@@ -9,6 +10,124 @@ interface SensorResponse {
   vibrating: boolean;
 }
 
+// ── Animation variants ─────────────────────────────────────────────────────
+const fadeUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
+const slideInLeft = {
+  hidden: { opacity: 0, x: -24 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
+const popIn = {
+  hidden: { opacity: 0, scale: 0.95, y: 10 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 260, damping: 22, delay: 0.6 },
+  },
+};
+
+const staggerContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.12 } },
+};
+
+const staggerChild = {
+  hidden: { opacity: 0, y: 24 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
+// ── Resizing Navbar ────────────────────────────────────────────────────────
+function ResizingNavbar({ router }: { router: any }) {
+  const { scrollY } = useScroll();
+  const [shrunk, setShrunk] = useState(false);
+  const [hovered, setHovered] = useState<number | null>(null);
+
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    setShrunk(latest > 80);
+  });
+
+  const navItems = [
+    { name: "Campus", href: "/campus" },
+    { name: "Live Sensor", href: "/room" },
+    { name: "How it Works", href: "#how" },
+  ];
+
+  return (
+    <motion.div
+      className="ed-nav"
+      animate={{
+        width: shrunk ? "640px" : "94%",
+        maxWidth: shrunk ? "640px" : "1140px",
+        y: shrunk ? 12 : 16,
+        backdropFilter: shrunk ? "blur(14px)" : "blur(0px)",
+        backgroundColor: shrunk
+          ? "rgba(244,242,238,0.85)"
+          : "rgba(244,242,238,0)",
+        borderColor: shrunk ? "rgba(0,0,0,0.08)" : "rgba(0,0,0,0)",
+        boxShadow: shrunk
+          ? "0 6px 24px rgba(0,0,0,0.06)"
+          : "0 0 0 rgba(0,0,0,0)",
+      }}
+      transition={{ type: "spring", stiffness: 200, damping: 30 }}
+    >
+      <div className="ed-nav-logo" onClick={() => router.push("/")}>
+        RoomGuard
+      </div>
+
+      <div className="ed-nav-items">
+        {navItems.map((item, idx) => (
+          <div
+            key={item.name}
+            className="ed-nav-item"
+            onMouseEnter={() => setHovered(idx)}
+            onMouseLeave={() => setHovered(null)}
+            onClick={() => {
+              if (item.href.startsWith("#")) {
+                document
+                  .querySelector(item.href)
+                  ?.scrollIntoView({ behavior: "smooth" });
+              } else {
+                router.push(item.href);
+              }
+            }}
+          >
+            {hovered === idx && (
+              <motion.div
+                layoutId="nav-hover-pill"
+                className="ed-nav-pill"
+                transition={{ type: "spring", stiffness: 350, damping: 30 }}
+              />
+            )}
+            <span style={{ position: "relative", zIndex: 2 }}>{item.name}</span>
+          </div>
+        ))}
+      </div>
+
+      <button className="ed-nav-cta" onClick={() => router.push("/campus")}>
+        View rooms →
+      </button>
+    </motion.div>
+  );
+}
+
+// ── Main ───────────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const router = useRouter();
   const [time, setTime] = useState("");
@@ -40,12 +159,18 @@ export default function LandingPage() {
     return () => clearInterval(id);
   }, []);
 
+  // Safely handle null distance
+  const distanceText =
+    sensor?.distance !== null && sensor?.distance !== undefined
+      ? `${sensor.distance}cm`
+      : "—";
+
   const sensorStatus =
     sensor === null
       ? "Connecting…"
       : sensor.occupied
-        ? `Occupied · ${sensor.distance}cm`
-        : `Vacant · ${sensor.distance}cm`;
+        ? `Occupied · ${distanceText}`
+        : `Vacant · ${distanceText}`;
 
   const sensorColor =
     sensor === null ? "#999" : sensor.occupied ? "#c87137" : "#1a4d1a";
@@ -62,51 +187,121 @@ export default function LandingPage() {
 
         html, body {
           font-family: 'Inter', sans-serif;
-          background: #f4f2ee;
           color: #1a1a1a;
           min-height: 100vh;
         }
 
-        /* Nav */
-        .ed-bar {
+        /* ── Body gradient background ────────────────────────────── */
+        body {
+          background:
+            radial-gradient(ellipse 1200px 600px at 50% 0%, #f4f2ee 0%, #ede9e2 40%, #d4cec3 100%),
+            linear-gradient(180deg, #f4f2ee 0%, #2a2a2a 200%);
+          background-attachment: fixed;
+          position: relative;
+        }
+
+        /* Subtle noise/grain overlay */
+        body::before {
+          content: '';
+          position: fixed;
+          inset: 0;
+          background-image:
+            radial-gradient(circle at 20% 30%, rgba(200,113,55,0.06) 0%, transparent 50%),
+            radial-gradient(circle at 80% 70%, rgba(26,26,26,0.08) 0%, transparent 50%);
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        /* All content sits above the gradient */
+        .ed-nav, .ed-wrap { position: relative; z-index: 1; }
+
+        /* ── Resizing nav ────────────────────────────────────────── */
+        .ed-nav {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          margin: 0 auto;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 18px 32px;
-          border-bottom: 1px solid rgba(0,0,0,0.06);
-          max-width: 1200px;
-          margin: 0 auto;
+          padding: 10px 14px 10px 24px;
+          border-radius: 999px;
+          border: 1px solid transparent;
+          z-index: 100;
+          -webkit-backdrop-filter: blur(0px);
         }
-        .ed-wordmark {
+
+        .ed-nav-logo {
           font-family: 'Fraunces', serif;
-          font-size: 22px;
+          font-size: 20px;
           font-weight: 600;
           letter-spacing: -0.5px;
           display: flex;
           align-items: center;
           gap: 8px;
           cursor: pointer;
+          flex-shrink: 0;
         }
-        .ed-wordmark::before {
+        .ed-nav-logo::before {
           content: '';
           width: 9px; height: 9px;
           border-radius: 50%;
           background: #1a1a1a;
-          display: inline-block;
         }
-        .ed-meta {
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 11px;
-          color: #888;
-          letter-spacing: 0.5px;
+
+        .ed-nav-items {
           display: flex;
-          gap: 20px;
+          align-items: center;
+          gap: 4px;
         }
-        .ed-meta .dot { color: #22c55e; }
 
-        .ed-wrap { max-width: 1200px; margin: 0 auto; }
+        .ed-nav-item {
+          position: relative;
+          padding: 8px 14px;
+          font-size: 13px;
+          font-weight: 500;
+          color: #555;
+          cursor: pointer;
+          border-radius: 999px;
+          transition: color 0.2s;
+        }
+        .ed-nav-item:hover { color: #1a1a1a; }
 
-        /* Hero */
+        .ed-nav-pill {
+          position: absolute;
+          inset: 0;
+          background: rgba(0,0,0,0.06);
+          border-radius: 999px;
+          z-index: 1;
+        }
+
+        .ed-nav-cta {
+          background: #1a1a1a;
+          color: #fff;
+          font-size: 12px;
+          font-weight: 500;
+          padding: 9px 16px;
+          border-radius: 999px;
+          border: none;
+          cursor: pointer;
+          font-family: 'Inter', sans-serif;
+          transition: opacity 0.15s;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .ed-nav-cta:hover { opacity: 0.85; }
+
+        @media (max-width: 720px) {
+          .ed-nav { padding: 8px 10px 8px 18px; }
+          .ed-nav-items { display: none; }
+          .ed-nav-logo { font-size: 17px; }
+          .ed-nav-cta { font-size: 11px; padding: 7px 12px; }
+        }
+
+        .ed-wrap { max-width: 1200px; margin: 0 auto; padding-top: 72px; }
+
+        /* ── Hero ────────────────────────────────────────────────── */
         .ed-hero-wrap {
           position: relative;
           padding: 16px 32px 0;
@@ -184,7 +379,6 @@ export default function LandingPage() {
           line-height: 1.7;
         }
 
-        /* Floating sensor card */
         .ed-float {
           position: absolute;
           right: 56px;
@@ -232,7 +426,6 @@ export default function LandingPage() {
           margin-top: 2px;
         }
 
-        /* Main section */
         .ed-main { padding: 80px 32px 40px; }
 
         .ed-grid {
@@ -324,7 +517,6 @@ export default function LandingPage() {
         }
         .ed-btn-secondary:hover { color: #1a1a1a; }
 
-        /* Problem / Solution split */
         .ed-split {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -388,7 +580,6 @@ export default function LandingPage() {
         .problem .ed-split-tag { background: #fef2f2; color: #c11; }
         .solution .ed-split-tag { background: rgba(134,239,172,0.12); color: #86efac; }
 
-        /* Numbers */
         .ed-numbers {
           display: grid;
           grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -424,7 +615,6 @@ export default function LandingPage() {
           margin-left: 3px;
         }
 
-        /* How it works */
         .ed-how-label {
           font-family: 'JetBrains Mono', monospace;
           font-size: 11px;
@@ -486,7 +676,6 @@ export default function LandingPage() {
           border-radius: 20px;
         }
 
-        /* Footer */
         .ed-footer {
           margin: 0 32px;
           padding: 28px 0;
@@ -500,7 +689,6 @@ export default function LandingPage() {
           letter-spacing: 0.5px;
         }
 
-        /* Responsive */
         @media (max-width: 700px) {
           .ed-headline { font-size: 52px; letter-spacing: -2px; }
           .ed-grid { grid-template-columns: 1fr; }
@@ -514,27 +702,20 @@ export default function LandingPage() {
           .ed-float { right: 20px; }
           .ed-hero-campus { font-size: 26px; }
           .ed-main { padding: 72px 20px 32px; }
-          .ed-bar, .ed-footer { padding-left: 20px; padding-right: 20px; }
+          .ed-footer { padding-left: 20px; padding-right: 20px; }
           .ed-hero-wrap { padding: 12px 16px 0; }
         }
       `}</style>
 
-      {/* Nav */}
-      <div className="ed-bar">
-        <div className="ed-wordmark" onClick={() => router.push("/")}>
-          RoomGuard
-        </div>
-        <div className="ed-meta">
-          <span>
-            <span className="dot">●</span> live
-          </span>
-          <span>StarkHacks · 2026</span>
-        </div>
-      </div>
+      <ResizingNavbar router={router} />
 
       <div className="ed-wrap">
-        {/* Hero */}
-        <div className="ed-hero-wrap">
+        <motion.div
+          className="ed-hero-wrap"
+          initial="hidden"
+          animate="visible"
+          variants={fadeUp}
+        >
           <div className="ed-hero">
             <img
               className="ed-hero-img"
@@ -556,8 +737,12 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Floating live sensor card */}
-          <div className="ed-float">
+          <motion.div
+            className="ed-float"
+            initial="hidden"
+            animate="visible"
+            variants={popIn}
+          >
             <div className="ed-float-icon" style={{ background: sensorBg }}>
               📡
             </div>
@@ -568,12 +753,18 @@ export default function LandingPage() {
               </div>
               <div className="ed-float-detail">last reading 2s ago</div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
-        {/* Headline + CTA */}
         <div className="ed-main">
-          <div className="ed-grid">
+          {/* viewport={{ once: false }} = replays every scroll */}
+          <motion.div
+            className="ed-grid"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.3 }}
+            variants={slideInLeft}
+          >
             <div>
               <div className="ed-issue">Vol. 01 · Study rooms, reinvented</div>
               <h1 className="ed-headline">
@@ -593,11 +784,19 @@ export default function LandingPage() {
                 live sensor feed ↘
               </button>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Problem / Solution */}
-          <div className="ed-split">
-            <div className="ed-split-card problem">
+          <motion.div
+            className="ed-split"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.2 }}
+            variants={staggerContainer}
+          >
+            <motion.div
+              className="ed-split-card problem"
+              variants={staggerChild}
+            >
               <div className="ed-split-label">The problem</div>
               <div className="ed-split-title">
                 Booked, abandoned, locked up for hours.
@@ -610,8 +809,11 @@ export default function LandingPage() {
               <div className="ed-split-tag">
                 avg. 47 min wasted / room / day
               </div>
-            </div>
-            <div className="ed-split-card solution">
+            </motion.div>
+            <motion.div
+              className="ed-split-card solution"
+              variants={staggerChild}
+            >
               <div className="ed-split-label">The fix</div>
               <div className="ed-split-title">
                 A sensor that knows when you've left.
@@ -622,44 +824,63 @@ export default function LandingPage() {
                 reservation auto-releases.
               </div>
               <div className="ed-split-tag">ESP32-S3 · HC-SR04 · MPU-6050</div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
-          {/* Numbers */}
-          <div className="ed-numbers">
-            <div className="ed-num">
+          <motion.div
+            className="ed-numbers"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.3 }}
+            variants={staggerContainer}
+          >
+            <motion.div className="ed-num" variants={staggerChild}>
               <div className="ed-num-label">Hardware</div>
               <div className="ed-num-val">
                 $8<em>/unit</em>
               </div>
-            </div>
-            <div className="ed-num">
+            </motion.div>
+            <motion.div className="ed-num" variants={staggerChild}>
               <div className="ed-num-label">Latency</div>
               <div className="ed-num-val">
                 2<em>sec</em>
               </div>
-            </div>
-            <div className="ed-num">
+            </motion.div>
+            <motion.div className="ed-num" variants={staggerChild}>
               <div className="ed-num-label">Threshold</div>
               <div className="ed-num-val">
                 15<em>min</em>
               </div>
-            </div>
-            <div className="ed-num">
+            </motion.div>
+            <motion.div className="ed-num" variants={staggerChild}>
               <div className="ed-num-label">vs. enterprise</div>
               <div className="ed-num-val">
                 $50k<em>+</em>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
-          {/* How it works */}
-          <div className="ed-how-label">How it works</div>
-          <h2 className="ed-how-title">
-            Hardware meets <em>software.</em>
-          </h2>
-          <div className="ed-steps">
-            <div className="ed-step">
+          <motion.div
+            id="how"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.2 }}
+            variants={fadeUp}
+          >
+            <div className="ed-how-label">How it works</div>
+            <h2 className="ed-how-title">
+              Hardware meets <em>software.</em>
+            </h2>
+          </motion.div>
+
+          <motion.div
+            className="ed-steps"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: false, amount: 0.2 }}
+            variants={staggerContainer}
+          >
+            <motion.div className="ed-step" variants={staggerChild}>
               <div className="ed-step-num">01</div>
               <div className="ed-step-title">Sensor detects presence</div>
               <div className="ed-step-body">
@@ -667,8 +888,8 @@ export default function LandingPage() {
                 room every two seconds.
               </div>
               <div className="ed-step-chip">HC-SR04 + MPU-6050</div>
-            </div>
-            <div className="ed-step">
+            </motion.div>
+            <motion.div className="ed-step" variants={staggerChild}>
               <div className="ed-step-num">02</div>
               <div className="ed-step-title">Data hits the cloud</div>
               <div className="ed-step-body">
@@ -676,8 +897,8 @@ export default function LandingPage() {
                 PostgreSQL database in real time.
               </div>
               <div className="ed-step-chip">Next.js · Neon</div>
-            </div>
-            <div className="ed-step">
+            </motion.div>
+            <motion.div className="ed-step" variants={staggerChild}>
               <div className="ed-step-num">03</div>
               <div className="ed-step-title">Room auto-releases</div>
               <div className="ed-step-body">
@@ -685,8 +906,8 @@ export default function LandingPage() {
                 gets flagged for cancellation.
               </div>
               <div className="ed-step-chip">15 min threshold</div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
 
         <footer className="ed-footer">
